@@ -87,7 +87,9 @@ def read_xlsx(path):
             ef_tuples.append((e_val, f_val))
         # ef_tuples is now: [(E_row1, F_row1), (E_row2, F_row2), ...]
         return ef_tuples
-
+		
+def clean_name(name):
+    return re.sub(r"\([^)]*\)", "", name).strip()
 
 def main():
     folder = os.path.dirname(os.path.abspath(__file__))
@@ -106,12 +108,26 @@ def main():
     with open(attendance_file, newline='', encoding=encoding) as f:
         reader = csv.reader(f, delimiter='\t')
         header = next(reader, None)
+        ignore = True
+        previous = ""
         for row in reader:
-            if len(row) < 5:
+            if row.length is None:
                 continue
-            name = row[0].strip()
-            time = row[3].strip()
-            attendance[name] = time
+            if ignore:
+                if previous.startswith("2. "):
+                    ignore = False
+                previous = row[0]
+                continue
+            else:
+                if row[0].startswith("3. "):
+                    ignore = True
+                    continue
+                name = clean_name(row[0])
+                time = row[3].strip()
+                if name in attendance:
+                    attendance[name] += " + " + time
+                else:
+                    attendance[name] = time
 
     # --- Read Polls XLSX files ---
     poll_files = [
